@@ -2,18 +2,21 @@
 @model IndexModel
 
 
+
 <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="infoModalLabel">Information</h5>
-        
+                <button type="button" class="btn btn-link" id="liveAlertBtn"><i class="fa fa-question"></i></button>
       </div>
       <div class="modal-body">
                 <div class="container">
+                    <div id="InformationAlert"></div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <h5>VirusTotal</h5>
+                        <div class="col-md-6">                     
+                           
+                            <h5>VirusTotal  </h5>
                             <p class="fw-bold">Detections: <span class="fw-normal" id="detection"></span></p>
                             <p class="fw-bold">Network: <span class="fw-normal" id="network"></span></p>
                             <p class="fw-bold">Last HTTPS Certificate Date: <span class="fw-normal" id="cert_date"></span></p>
@@ -22,13 +25,13 @@
                             <p class="fw-bold">AS Owner: <span class="fw-normal" id="as_owner"></span></p>
                         </div>
                         <div class="col-md-6">
-                            <h5>AbuseIPDB</h5>
+                            <h5>AbuseIPDB </h5>
                             <p class="fw-bold">Domain: <span class="fw-normal" id="adomain"></span></p>
                             <p class="fw-bold">Abuse confidence score: <span class="fw-normal" id="abusescore"></span></p>
                             <p class="fw-bold">Usage type: <span class="fw-normal" id="usagetype"></span></p>                         
                             <p class="fw-bold">ABUSEIPDB Whitelisted: <span class="fw-normal" id="awhitelist"></span></p>
                             <p class="fw-bold">ISP: <span class="fw-normal" id="aisp"></span></p>
-                            <a href="#" id="reportslink" class="link-primary">Read AbuseIPDB Reports</a>
+                            <a href="#" id="reportslink" class="link-primary">AbuseIPDB Reports</a>
 
                         </div>
                     </div>
@@ -198,16 +201,38 @@
             document.getElementById('country').innerHTML = '';
             document.getElementById('analysis_date').innerHTML = '';
             document.getElementById('as_owner').innerHTML = '';
-            document.getElementById('adomain').innerHTML = '';
+            document.getElementById('adomain').innerHTML = '';          
             document.getElementById('abusescore').innerHTML = '';
             document.getElementById('usagetype').innerHTML = '';
             document.getElementById('awhitelist').innerHTML = '';
             document.getElementById('aisp').innerHTML = '';
             document.getElementById('infoData').value = 'Loading...';
+
+            //reset class attribute for recoloring.
+            document.getElementById('abusescore').removeAttribute('class');
         });
-            
-                
-       
+
+
+        const alertPlaceholder = document.getElementById('InformationAlert')
+
+        const alert = (message, type) => {
+            const wrapper = document.createElement('div')
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                `   <div>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('')
+
+            alertPlaceholder.append(wrapper)
+        }
+
+        const alertTrigger = document.getElementById('liveAlertBtn')
+        if (alertTrigger) {
+            alertTrigger.addEventListener('click', () => {
+                alert('VirusTotal: Website scan, AbuseIPDB: IP abuse (portscan, nmap etc) ', 'info')
+            })
+        }
         
  
 

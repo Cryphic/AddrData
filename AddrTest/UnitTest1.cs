@@ -27,7 +27,7 @@ namespace AddrTest
         public async Task InfoControllerReturnsObjectResponse()
         {
             // arrange
-            string ipAddress = "gdfgdfg";
+            string ipAddress = "8.8.8.8";
 
             // act
             var result = await _infoController.Get(ipAddress);
