@@ -6,64 +6,69 @@ using MongoDB.Driver;
 using System.Diagnostics;
 using System.Data;
 using System;
+using System.Runtime;
+using System.IO;
+using System.Net.NetworkInformation;
 
 namespace AddrData
 {
-    //to-do: implement settings class
-    public class DatabaseSettings
+   
+    class DatabaseSettings
     {
-        public string IP { get; set; }
-        public int Port { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
+        private string _connectionString;
+        private string _database;
+        private string _collection;
 
-        public DatabaseSettings()
+        public string ConnectionString
         {
+            get { return _connectionString; }
+        }
 
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "settings.ini");
-            var databaseSettings = new DatabaseSettings();
+        public string Database
+        {
+            get { return _database; }
+        }
 
-            if (File.Exists(path))
+        public string Collection
+        {
+            get { return _collection; }
+        }
+
+        public void ReadSettings(string filePath)
+        {
+            try
             {
-                var lines = File.ReadAllLines(path);
-                var section = string.Empty;
-                var settings = new Dictionary<string, string>();
+                Dictionary<string, string> settings = new Dictionary<string, string>();
 
-                foreach (var line in lines)
+                using (StreamReader reader = new StreamReader(filePath))
                 {
-                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
                     {
-                        section = line.Substring(1, line.Length - 2);
-                    }
-                    else if (section == "databaseSettings")
-                    {
-                        var parts = line.Split('=');
-                        if (parts.Length == 2)
+                        if (line.TrimStart().StartsWith("[Settings]"))
                         {
-                            settings[parts[0]] = parts[1];
+                            continue;
+                        }
+
+                        int equalIndex = line.IndexOf('=');
+                        if (equalIndex != -1)
+                        {
+                            string key = line.Substring(0, equalIndex).Trim();
+                            string value = line.Substring(equalIndex + 1).Trim(' ', '"');
+
+                            settings[key] = value;
                         }
                     }
                 }
 
-                if (settings.TryGetValue("IP", out var ip))
-                {
-                    databaseSettings.IP = ip;
-                }
-                if (settings.TryGetValue("Port", out var port))
-                {
-                    if (int.TryParse(port, out var parsedPort))
-                    {
-                        databaseSettings.Port = parsedPort;
-                    }
-                }
-                if (settings.TryGetValue("Username", out var username))
-                {
-                    databaseSettings.Username = username;
-                }
-                if (settings.TryGetValue("Password", out var password))
-                {
-                    databaseSettings.Password = password;
-                }
+                _connectionString = settings["ConnectionString"];
+                _database = settings["Database"];
+                _collection = settings["Collection"];
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading settings from {filePath}: {ex.Message}");
+                throw;
             }
         }
     }
@@ -80,7 +85,7 @@ namespace AddrData
     internal class Program
     {
        
-
+        //implementoitu vanhasta projustani
         static async Task serverlistener(CancellationToken cancellationToken)
         {
             TcpListener server = null;
@@ -94,6 +99,7 @@ namespace AddrData
                 // Aloita loop
                 while (true)
                 {
+                    Thread.Sleep(1000);
                     Console.Write("Listening...");
                     // Hyväksy kaikki yhteydet
                     TcpClient client = await server.AcceptTcpClientAsync();
@@ -178,17 +184,40 @@ namespace AddrData
         }
 
 
-
-
-
-
-
+ 
 
         static void Main(string[] args)
         {
-            var client = new MongoClient("mongodb+srv://test:test@cluster0.tsde1.mongodb.net/?retryWrites=true&w=majority");
-            var database = client.GetDatabase("AddrData");
-            var collection = database.GetCollection<PacketData>("data");
+
+           //Init settings class
+            var MongoSettings = new DatabaseSettings();
+            MongoSettings.ReadSettings("Settings.ini");
+            //print variables
+            Console.WriteLine("MongoDB Settings read as:");
+            Console.WriteLine(MongoSettings.ConnectionString);
+            Console.WriteLine(MongoSettings.Database);
+            Console.WriteLine(MongoSettings.Collection);
+
+
+            var client = new MongoClient(MongoSettings.ConnectionString);        
+            while (true) { 
+            try {                     
+            bool isMongoLive = client.GetDatabase(MongoSettings.Database).RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+                    if (isMongoLive)
+                    {
+                        Console.WriteLine("MongoDB Connection established.");
+                        break;
+                    }
+                } catch (Exception ex)
+                {
+                    Console.WriteLine("Error connecting to MongoDB:" + ex.Message);
+                    Console.WriteLine("Retrying in 5 seconds...");
+                    Thread.Sleep(5000);
+                }
+            }
+
+            var database = client.GetDatabase(MongoSettings.Database);
+            var collection = database.GetCollection<PacketData>(MongoSettings.Collection);
 
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, eventArgs) => {
@@ -227,13 +256,29 @@ namespace AddrData
                 byte[] sourceBytes = new byte[4];
                 Array.Copy(buffer, 12, sourceBytes, 0, 4);
                 IPAddress sourceAddress = new IPAddress(sourceBytes);
+                
+            
+
+
+
 
                 byte[] destinationBytes = new byte[4];
                 Array.Copy(buffer, 16, destinationBytes, 0, 4);
                 IPAddress destinationAddress = new IPAddress(destinationBytes);
 
-                //var PacketData isnt local ip
+                // LAN address check bitwise operatio
+                uint address = BitConverter.ToUInt32(sourceAddress.GetAddressBytes(), 0);
+                uint subnet192168 = BitConverter.ToUInt32(IPAddress.Parse("255.255.0.0").GetAddressBytes(), 0);
+                uint subnet10 = BitConverter.ToUInt32(IPAddress.Parse("255.0.0.0").GetAddressBytes(), 0);
+                uint subnet17216 = BitConverter.ToUInt32(IPAddress.Parse("255.240.0.0").GetAddressBytes(), 0);
 
+                if ((address & subnet192168) == BitConverter.ToUInt32(IPAddress.Parse("192.168.0.0").GetAddressBytes(), 0) ||
+                    (address & subnet10) == BitConverter.ToUInt32(IPAddress.Parse("10.0.0.0").GetAddressBytes(), 0) ||
+                    (address & subnet17216) == BitConverter.ToUInt32(IPAddress.Parse("172.16.0.0").GetAddressBytes(), 0))
+                {
+                    // skip iteratio        
+                    continue;
+                }
 
 
 

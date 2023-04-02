@@ -10,6 +10,30 @@
         
       </div>
       <div class="modal-body">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>VirusTotal</h5>
+                            <p class="fw-bold">Detections: <span class="fw-normal" id="detection"></span></p>
+                            <p class="fw-bold">Network: <span class="fw-normal" id="network"></span></p>
+                            <p class="fw-bold">Last HTTPS Certificate Date: <span class="fw-normal" id="cert_date"></span></p>
+                            <p class="fw-bold">Country: <span class="fw-normal" id="country"></span></p>
+                            <p class="fw-bold">Last Analysis Date: <span class="fw-normal" id="analysis_date"></span></p>
+                            <p class="fw-bold">AS Owner: <span class="fw-normal" id="as_owner"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>AbuseIPDB</h5>
+                            <p class="fw-bold">Domain: <span class="fw-normal" id="adomain"></span></p>
+                            <p class="fw-bold">Abuse confidence score: <span class="fw-normal" id="abusescore"></span></p>
+                            <p class="fw-bold">Usage type: <span class="fw-normal" id="usagetype"></span></p>                         
+                            <p class="fw-bold">ABUSEIPDB Whitelisted: <span class="fw-normal" id="awhitelist"></span></p>
+                            <p class="fw-bold">ISP: <span class="fw-normal" id="aisp"></span></p>
+                            <a href="#" id="reportslink" class="link-primary">Read AbuseIPDB Reports</a>
+
+                        </div>
+                    </div>
+                </div>
+          <h4>Raw data:</h4>
         <textarea id="infoData" class="form-control" rows="10">Loading...</textarea>
       </div>
       <div class="modal-footer">
@@ -108,24 +132,79 @@
 
 
           function showInfoModal(ip) {
+
   // Make the API request
-  fetch(`/api/info/${ip}`)
-    .then(response => response.json())
-    .then(data => {
-      // set textarea
-      document.getElementById("infoData").value = JSON.stringify(data, null, 2);
-    })
-    .catch(error => console.error(error));
+            fetch(`/api/info/${ip}`)
+                .then(response => response.json())
+                .then(data => {
+                    // set textarea
+                    var stringifiedData = JSON.stringify(data, null, 2);
+                    document.getElementById("infoData").value = stringifiedData;
+
+                    if (data?.virusTotal?.data?.attributes) {
+                        var vt = data.virusTotal.data.attributes; // set predefined access vars for parsed data.
+                        var harmlessColor = vt.last_analysis_stats.harmless > 0 ? 'text-success' : 'text-muted';
+                        var maliciousColor = vt.last_analysis_stats.malicious > 0 ? 'text-danger' : 'text-muted';
+                        var suspiciousColor = vt.last_analysis_stats.suspicious > 0 ? 'text-warning' : 'text-muted';
+                        var undetectedColor = vt.last_analysis_stats.undetected > 0 ? 'text-secondary' : 'text-muted';
+                        var timeoutColor = vt.last_analysis_stats.timeout > 0 ? 'text-secondary' : 'text-muted';
+
+                        document.getElementById('detection').innerHTML = `<span class="${harmlessColor}">harmless: ${vt.last_analysis_stats.harmless}</span>, <span class="${maliciousColor}">malicious: ${vt.last_analysis_stats.malicious}</span>, <span class="${suspiciousColor}">suspicious: ${vt.last_analysis_stats.suspicious}</span>, <span class="${undetectedColor}">undetected: ${vt.last_analysis_stats.undetected}</span>, <span class="${timeoutColor}">timeout: ${vt.last_analysis_stats.timeout}</span>`;
+                        document.getElementById('network').innerHTML = vt.network || 'N/A';
+                        document.getElementById('cert_date').innerHTML = vt.last_https_certificate_date || 'N/A';
+                        document.getElementById('country').innerHTML = vt.country || 'N/A';
+                        document.getElementById('analysis_date').innerHTML = vt.last_analysis_date || 'N/A';
+                        document.getElementById('as_owner').innerHTML = vt.as_owner || 'N/A';
+                    }
+                    if (data?.abuseIPDB?.data) {
+                        var ai = data.abuseIPDB.data; // set predefined access vars for parsed data.
+                        document.getElementById('adomain').innerHTML = ai.domain || 'N/A';
+                        let score = ai.abuseConfidenceScore || 'N/A';
+                        let scoreElement = document.getElementById('abusescore');
+                        if (score >= 80) {
+                            scoreElement.classList.add('text-danger'); // red
+                        } else if (score >= 60) {
+                            scoreElement.classList.add('text-warning'); // yellow
+                        } else if (score >= 30) {
+                            scoreElement.classList.add('text-info'); // blue
+                        } else {
+                            scoreElement.classList.add('text-muted'); // gray
+                        }
+                        scoreElement.innerHTML = score;
+                        document.getElementById('usagetype').innerHTML = ai.usageType || 'N/A';
+                        document.getElementById('awhitelist').innerHTML = ai.isWhitelisted || 'N/A';
+                        document.getElementById('aisp').innerHTML = ai.isp || 'N/A';
+                        document.getElementById('reportslink').href = 'https://www.abuseipdb.com/check/' + ip;
+                    }
+                })
+                .catch(error => console.error(error));
 
   // Show modal
   var myModal = new bootstrap.Modal(document.getElementById('infoModal'));
   myModal.show();
 }
 
-   
-   
-  
-       
+
+
+
+        var modalCloseBtn = document.querySelector('#infoModal .modal-footer button');
+
+        // Add an event listener to the modal close button
+        modalCloseBtn.addEventListener('click', function () {
+            // Reset the values of all the elements inside the modal body
+            document.getElementById('detection').innerHTML = '';
+            document.getElementById('network').innerHTML = '';
+            document.getElementById('cert_date').innerHTML = '';
+            document.getElementById('country').innerHTML = '';
+            document.getElementById('analysis_date').innerHTML = '';
+            document.getElementById('as_owner').innerHTML = '';
+            document.getElementById('adomain').innerHTML = '';
+            document.getElementById('abusescore').innerHTML = '';
+            document.getElementById('usagetype').innerHTML = '';
+            document.getElementById('awhitelist').innerHTML = '';
+            document.getElementById('aisp').innerHTML = '';
+            document.getElementById('infoData').value = 'Loading...';
+        });
             
                 
        

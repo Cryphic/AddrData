@@ -25,7 +25,16 @@ namespace AddrDataWeb
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase("AddrData");
             var collection = database.GetCollection<PacketData>("data");
+
+            //Check if database collection is successful
+            if (collection == null)
+            {
+                throw new System.Exception("Database connection failed");
+            }
+
             builder.Services.AddSingleton(collection);
+
+
 
             var app = builder.Build();
 

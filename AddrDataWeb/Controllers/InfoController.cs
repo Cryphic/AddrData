@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 #region API classes for deserialization
-class VirusTotal
+public class VirusTotal
 {
 
     public class Response
@@ -63,7 +63,7 @@ class VirusTotal
         public string engine_name { get; set; }
     }
 }
-class AbuseIPDB
+public class AbuseIPDB
 {
     public class Response
     {
@@ -72,19 +72,26 @@ class AbuseIPDB
 
     public class Data
     {
-        public int total { get; set; }
-        public int page { get; set; }
-        public int count { get; set; }
-        public int perPage { get; set; }
-        public int lastPage { get; set; }
-        public object nextPageUrl { get; set; }
-        public object previousPageUrl { get; set; }
-        public List<Result> results { get; set; }
+        public string ipAddress { get; set; }
+        public bool? isPublic { get; set; }
+        public int ipVersion { get; set; }
+        public bool? isWhitelisted { get; set; }
+        public int abuseConfidenceScore { get; set; }
+        public string countryCode { get; set; }
+        public string countryName { get; set; }
+        public string usageType { get; set; }
+        public string isp { get; set; }
+        public string domain { get; set; }
+        public List<object> hostnames { get; set; }
+        public int totalReports { get; set; }
+        public int numDistinctUsers { get; set; }
+        public DateTime? lastReportedAt { get; set; }
+        public List<Report> reports { get; set; }
     }
 
-    public class Result
+    public class Report
     {
-        public string reportedAt { get; set; }
+        public DateTime reportedAt { get; set; }
         public string comment { get; set; }
         public List<int> categories { get; set; }
         public int reporterId { get; set; }
@@ -118,12 +125,12 @@ namespace AddrDataWeb.Controllers
                                       apikey: "c25594a277e9143407bc57d1bb89d1c5dc94cc5d930d5eecbbeaf69a83c18c39",
                                       header: "x-apikey");
 
-            AbuseIPDB.Response abuse =  await QueryFunc<AbuseIPDB.Response>(url: $"https://api.abuseipdb.com/api/v2/reports?ipAddress={ip}",
+            AbuseIPDB.Response abuse =  await QueryFunc<AbuseIPDB.Response>(url: $"https://api.abuseipdb.com/api/v2/check?ipAddress={ip}",
                                        apikey: "86a9ee610b400c5be869343dfd079d0ec54a6d46ffde6ddcdc5d8f470ef290eb534b9289eb109b05",
                                        header: "Key");
             
             
-
+            
 
             //combine results and return w/ OkObjectResult aka OK answer code 200 
             return Ok(new { VirusTotal = total, AbuseIPDB = abuse });
