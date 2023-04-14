@@ -17,7 +17,7 @@ namespace AddrDataWeb.Pages
         {
             _collection = collection;
         }
-
+        /*On PostDelete from HTML Delete specified IP*/
         public IActionResult OnPostDelete(string ip)
         {
             var filter = Builders<PacketData>.Filter.Eq(x => x.IP, ip);
@@ -25,6 +25,8 @@ namespace AddrDataWeb.Pages
 
             return RedirectToPage();
         }
+
+        /*On PostBlock from HTML send TCP message to block specified IP*/
         public IActionResult OnPostBlock(string sender, string ip)
         {
             Console.WriteLine("Blocking : " + ip);
@@ -54,6 +56,8 @@ namespace AddrDataWeb.Pages
             return RedirectToPage();
         }
 
+
+        /*On HTML GET read database*/
         public List<PacketData> Packets { get; set; }
         public void OnGet()
         {

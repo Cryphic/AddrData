@@ -14,6 +14,7 @@ namespace AddrDataWeb
     {
         public static void Main(string[] args)
         {
+            //init webapplication builder
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
@@ -21,6 +22,7 @@ namespace AddrDataWeb
             builder.Services.AddControllers();
             builder.Services.AddHttpClient();
 
+            //init mongodb connection
             var connectionString = "mongodb+srv://test:test@cluster0.tsde1.mongodb.net/?retryWrites=true&w=majority";
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase("AddrData");
@@ -35,7 +37,7 @@ namespace AddrDataWeb
             builder.Services.AddSingleton(collection);
 
 
-
+            //build the web application
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -58,7 +60,7 @@ namespace AddrDataWeb
             });
 
 
-
+            
             app.Run();
         }
     }

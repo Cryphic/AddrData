@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
+/* Read API data into these classes */
+
 #region API classes for deserialization
 public class VirusTotal
 {
@@ -115,7 +117,7 @@ namespace AddrDataWeb.Controllers
             _clientFactory = clientFactory;
         }
 
-      
+      //API Controllers IP PATH on GET request run the QueryFunc and return results
         [HttpGet("{ip}")]
         public async Task<IActionResult> Get(string ip)
         {
@@ -143,19 +145,21 @@ namespace AddrDataWeb.Controllers
          
         }
 
-       
+
 
         //Deserialization class, url, api, headers
+        /*method sends an HTTP GET request to the specified URL with an API key in the header*/
         public async Task<T> QueryFunc<T>(string url, string apikey, string header)
         {
+            //Init result var and create client
             T result = default;
             var client = _clientFactory.CreateClient();
-            client.DefaultRequestHeaders.Add(header, apikey);
+            client.DefaultRequestHeaders.Add(header, apikey); //set headers
             var response = await client.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
-                result = JsonSerializer.Deserialize<T>(jsonString);
+                result = JsonSerializer.Deserialize<T>(jsonString); //Read on success and deserialize
             }
             return result;
         }

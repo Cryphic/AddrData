@@ -12,14 +12,16 @@ using System.Net.NetworkInformation;
 
 namespace AddrData
 {
-   
+   /*DatabaseSettings class that reads settings.ini file for specific lines
+    * StreamReader reads the file line by line and saves the values to a dictionary
+    */
     class DatabaseSettings
     {
         public string connectionString { get; set; } = null!;
         public string database { get; set; } = null!;
         public string collection { get; set; } = null!;
+        public string LanIP { get; set; } = null!;
 
- 
 
         public void ReadSettings(string filePath)
         {
@@ -51,6 +53,7 @@ namespace AddrData
                 connectionString = settings["ConnectionString"];
                 database = settings["Database"];
                 collection = settings["Collection"];
+                LanIP = settings["LAN_IP"];
             }
             catch (Exception ex)
             {
@@ -59,7 +62,10 @@ namespace AddrData
             }
         }
     }
-
+    /* PacketData class that contains the data that is saved to the database
+     *
+     *
+     */
     public class PacketData
     {
         public ObjectId Id { get; set; } 
@@ -72,27 +78,27 @@ namespace AddrData
     internal class Program
     {
        
-        //implementoitu vanhasta projustani
+        //Implemented from my old project
         static async Task serverlistener(CancellationToken cancellationToken)
         {
             TcpListener server = null;
             try
             {
-                // Avaa uusi TCPKuuntelija portille 8787 ja hyväksy kaikki IP-Osoitteet
+                // Accept all IP addresses on port 8787
                 server = new TcpListener(IPAddress.Any, 8787);
-                // Aloita kuuntelu
+                // Start listening
                 server.Start();
 
-                // Aloita loop
+              
                 while (true)
                 {
                     Thread.Sleep(1000);
                     Console.Write("Listening...");
-                    // Hyväksy kaikki yhteydet
+                    // accept connections
                     TcpClient client = await server.AcceptTcpClientAsync();
                     Console.WriteLine("Connected");
 
-                    // Stream objekti lukemiselle
+                    // Stream object for reading
                     NetworkStream stream = client.GetStream();
                     while (true)
                     {
@@ -106,23 +112,23 @@ namespace AddrData
 
                         if (stream.DataAvailable)
                         {
-                            //uusi puskuri ja puskurinkoko pyydetään clientiltä
+                            //new buffer and ask the size from client
                             byte[] buffer = new byte[client.ReceiveBufferSize];
                             int bytesRead = await stream.ReadAsync(buffer, 0, client.ReceiveBufferSize);
-                            //Dekoodataan Bytes jotta saadaan merkkijono.
+                            //Decode for the string
                             string dataReceived = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                            //tulostetaan merkkijono
+                            //Print it in console
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Received: {0}", dataReceived);
                             Console.ResetColor();
-                            //add block rule in windows firewall
+                            
                             string ipAddressToBlock = dataReceived;
 
                             Console.WriteLine("Starting block process");
                             Process process = new Process();
                             process.StartInfo.FileName = "netsh";
                             
-                            
+                            //Create netsh process to block the received IP
                             process.StartInfo.Arguments = $"advfirewall firewall add rule name=\"ADDRCLIENT\" dir=in action=block remoteip={ipAddressToBlock} enable=yes"; ;
                             process.StartInfo.UseShellExecute = false;
                             process.StartInfo.RedirectStandardOutput = true;
@@ -202,24 +208,27 @@ namespace AddrData
                     Thread.Sleep(5000);
                 }
             }
-
+            /* Defining database and collection (read from settings.ini) */
             var database = client.GetDatabase(MongoSettings.database);
             var collection = database.GetCollection<PacketData>(MongoSettings.collection);
 
+
+            //Cancelation token CTRL C in console window starts the closing event so process can close itself
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, eventArgs) => {
                 eventArgs.Cancel = true;
                 cts.Cancel();
             };
 
-
+            /* Socket binding to IP and receiving all IO traffic*/
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.IP);
-            socket.Bind(new IPEndPoint(IPAddress.Parse("192.168.1.102"), 0));
+            socket.Bind(new IPEndPoint(IPAddress.Parse(MongoSettings.LanIP), 0));
             socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HeaderIncluded, true);
             socket.IOControl(IOControlCode.ReceiveAll, BitConverter.GetBytes(1), BitConverter.GetBytes(1));
 
             var listenerTask = serverlistener(cts.Token);
 
+            /*Runs until cancellation is requested (CTRL + C) */
             while (!cts.Token.IsCancellationRequested)
             {
                 
@@ -227,7 +236,7 @@ namespace AddrData
 
 
 
-                // Packet receive
+                // Packet receive into buffer
                 byte[] buffer = new byte[4096];
                 try
                 {
@@ -235,6 +244,7 @@ namespace AddrData
                 }
                 catch (SocketException ex)
                 {
+                    //incase of random socket exceptions happen just iterate again
                     Console.WriteLine(ex.Message);
                     continue;
                 }
@@ -242,18 +252,20 @@ namespace AddrData
                 // IP header Source/Dest
                 byte[] sourceBytes = new byte[4];
                 Array.Copy(buffer, 12, sourceBytes, 0, 4);
+                
+                //Turning bytes into IPAddress
                 IPAddress sourceAddress = new IPAddress(sourceBytes);
                 
             
 
 
 
-
+                //Bytes to IPAddress
                 byte[] destinationBytes = new byte[4];
                 Array.Copy(buffer, 16, destinationBytes, 0, 4);
                 IPAddress destinationAddress = new IPAddress(destinationBytes);
 
-                // LAN address check bitwise operatio
+                // LAN address check bitwise operation (preventing database getting filled with local addresses)
                 uint address = BitConverter.ToUInt32(sourceAddress.GetAddressBytes(), 0);
                 uint subnet192168 = BitConverter.ToUInt32(IPAddress.Parse("255.255.0.0").GetAddressBytes(), 0);
                 uint subnet10 = BitConverter.ToUInt32(IPAddress.Parse("255.0.0.0").GetAddressBytes(), 0);
@@ -263,18 +275,18 @@ namespace AddrData
                     (address & subnet10) == BitConverter.ToUInt32(IPAddress.Parse("10.0.0.0").GetAddressBytes(), 0) ||
                     (address & subnet17216) == BitConverter.ToUInt32(IPAddress.Parse("172.16.0.0").GetAddressBytes(), 0))
                 {
-                    // skip iteratio        
+                    // skip iteration on wrong address       
                     continue;
                 }
 
 
-
+                //Form packet data object
                 var packetData = new PacketData
                 {
                     IP = sourceAddress.ToString(),
                     Sender = Environment.MachineName
                 };
-
+                //MongoDB Filters
                 var filter = Builders<PacketData>.Filter.Where(x => x.IP == packetData.IP && x.Sender == packetData.Sender);
                 var update = Builders<PacketData>.Update.Inc("Count", 1);
 
@@ -286,12 +298,12 @@ namespace AddrData
 
                 var result = collection.FindOneAndUpdate(filter, update, options);
 
-                // Info printti
-                Console.WriteLine("From " + sourceAddress.ToString() + " to " + destinationAddress.ToString());
-                Array.Clear(buffer, 0, buffer.Length);
+                // Info print (debug)
+                //Console.WriteLine("From " + sourceAddress.ToString() + " to " + destinationAddress.ToString());
+                Array.Clear(buffer, 0, buffer.Length); //clear the buffer
             }
 
-            //testing purposes clear rules
+            //clear Firewall rules on CTRL + C exit
             Console.WriteLine("clear firewall rules");           
             Process process = new Process();
             process.StartInfo.FileName = "netsh";
