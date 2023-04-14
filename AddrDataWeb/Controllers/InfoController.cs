@@ -121,19 +121,26 @@ namespace AddrDataWeb.Controllers
         {
 
             //Query APIs
+            try
+            {
             VirusTotal.Response total = await QueryFunc<VirusTotal.Response>(url: $"https://www.virustotal.com/api/v3/ip_addresses/{ip}",
-                                      apikey: "c25594a277e9143407bc57d1bb89d1c5dc94cc5d930d5eecbbeaf69a83c18c39",
-                                      header: "x-apikey");
+                                     apikey: "c25594a277e9143407bc57d1bb89d1c5dc94cc5d930d5eecbbeaf69a83c18c39",
+                                     header: "x-apikey");
 
             AbuseIPDB.Response abuse =  await QueryFunc<AbuseIPDB.Response>(url: $"https://api.abuseipdb.com/api/v2/check?ipAddress={ip}",
                                        apikey: "86a9ee610b400c5be869343dfd079d0ec54a6d46ffde6ddcdc5d8f470ef290eb534b9289eb109b05",
-                                       header: "Key");
-            
-            
-            
+                                      header: "Key");
 
-            //combine results and return w/ OkObjectResult aka OK answer code 200 
-            return Ok(new { VirusTotal = total, AbuseIPDB = abuse });
+
+                //combine results and return w/ OkObjectResult aka OK answer code 200 
+                return Ok(new { VirusTotal = total, AbuseIPDB = abuse });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+
+            }
+         
         }
 
        

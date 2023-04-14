@@ -15,24 +15,11 @@ namespace AddrData
    
     class DatabaseSettings
     {
-        private string _connectionString;
-        private string _database;
-        private string _collection;
+        public string connectionString { get; set; } = null!;
+        public string database { get; set; } = null!;
+        public string collection { get; set; } = null!;
 
-        public string ConnectionString
-        {
-            get { return _connectionString; }
-        }
-
-        public string Database
-        {
-            get { return _database; }
-        }
-
-        public string Collection
-        {
-            get { return _collection; }
-        }
+ 
 
         public void ReadSettings(string filePath)
         {
@@ -61,9 +48,9 @@ namespace AddrData
                     }
                 }
 
-                _connectionString = settings["ConnectionString"];
-                _database = settings["Database"];
-                _collection = settings["Collection"];
+                connectionString = settings["ConnectionString"];
+                database = settings["Database"];
+                collection = settings["Collection"];
             }
             catch (Exception ex)
             {
@@ -75,10 +62,10 @@ namespace AddrData
 
     public class PacketData
     {
-        public ObjectId Id { get; set; }
-        public string IP { get; set; }
-        public string Sender { get; set; }
-        public int Count { get; set; }
+        public ObjectId Id { get; set; } 
+        public string IP { get; set; } = null!;
+        public string Sender { get; set; } = null!;
+        public int Count { get; set; } 
     }
 
 
@@ -194,15 +181,15 @@ namespace AddrData
             MongoSettings.ReadSettings("Settings.ini");
             //print variables
             Console.WriteLine("MongoDB Settings read as:");
-            Console.WriteLine(MongoSettings.ConnectionString);
-            Console.WriteLine(MongoSettings.Database);
-            Console.WriteLine(MongoSettings.Collection);
+            Console.WriteLine(MongoSettings.connectionString);
+            Console.WriteLine(MongoSettings.database);
+            Console.WriteLine(MongoSettings.collection);
 
 
-            var client = new MongoClient(MongoSettings.ConnectionString);        
+            var client = new MongoClient(MongoSettings.connectionString);        
             while (true) { 
             try {                     
-            bool isMongoLive = client.GetDatabase(MongoSettings.Database).RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+            bool isMongoLive = client.GetDatabase(MongoSettings.database).RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
                     if (isMongoLive)
                     {
                         Console.WriteLine("MongoDB Connection established.");
@@ -216,8 +203,8 @@ namespace AddrData
                 }
             }
 
-            var database = client.GetDatabase(MongoSettings.Database);
-            var collection = database.GetCollection<PacketData>(MongoSettings.Collection);
+            var database = client.GetDatabase(MongoSettings.database);
+            var collection = database.GetCollection<PacketData>(MongoSettings.collection);
 
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, eventArgs) => {
@@ -300,7 +287,7 @@ namespace AddrData
                 var result = collection.FindOneAndUpdate(filter, update, options);
 
                 // Info printti
-                //Console.WriteLine("From " + sourceAddress.ToString() + " to " + destinationAddress.ToString());
+                Console.WriteLine("From " + sourceAddress.ToString() + " to " + destinationAddress.ToString());
                 Array.Clear(buffer, 0, buffer.Length);
             }
 
