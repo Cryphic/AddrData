@@ -176,8 +176,23 @@ namespace AddrData
             }
         }
 
+        public static string GetLocalIPAddress()
+        {
+            string ipAddress = null;
+            var host = Dns.GetHostEntry(Dns.GetHostName());
 
- 
+            foreach (var address in host.AddressList)
+            {
+                if (address.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    ipAddress = address.ToString();
+                    break;
+                }
+            }
+
+            return ipAddress;
+        }
+
 
         static void Main(string[] args)
         {
@@ -190,7 +205,7 @@ namespace AddrData
             Console.WriteLine(MongoSettings.connectionString);
             Console.WriteLine(MongoSettings.database);
             Console.WriteLine(MongoSettings.collection);
-
+            Console.WriteLine(MongoSettings.LanIP);
 
             var client = new MongoClient(MongoSettings.connectionString);        
             while (true) { 
@@ -222,7 +237,19 @@ namespace AddrData
 
             /* Socket binding to IP and receiving all IO traffic*/
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.IP);
-            socket.Bind(new IPEndPoint(IPAddress.Parse(MongoSettings.LanIP), 0));
+            try
+            {
+                socket.Bind(new IPEndPoint(IPAddress.Parse(MongoSettings.LanIP), 0));
+            }
+            //Catching error and using fallback IP when config IP is not available.
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressNotAvailable)
+            {
+                Console.WriteLine("Error on Socket.Bind, SocketError.AddressNotAvailable");
+                Console.WriteLine("Changing to fallback IP");
+                socket.Bind(new IPEndPoint(IPAddress.Parse(GetLocalIPAddress()), 0));
+            }
+           
+            
             socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HeaderIncluded, true);
             socket.IOControl(IOControlCode.ReceiveAll, BitConverter.GetBytes(1), BitConverter.GetBytes(1));
 
