@@ -8,4 +8,15 @@ AddrData/.vs
 *.pdb
 *.manifest
 *.cache
-*
+*.config/
+*.msi
+*.tmp
+AddrTest/obj/
+AddrDataTest/Obj
+*.pubxml
+*.targets
+AddrTest/
+
+
+node_modules/
+AddrService/README.md
