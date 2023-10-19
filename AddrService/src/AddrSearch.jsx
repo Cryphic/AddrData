@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import formatData from './FormatData';
+import ExportData from './ExportData';
+import StatusStrip from './StatusStrip';
 
 function AddrSearch() {
     const [ip, setIp] = useState('');
@@ -20,6 +22,7 @@ function AddrSearch() {
 
       return (
     <div>
+      <StatusStrip apiUrl="http://localhost:5000/" />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white mt-8">
         <div className="w-full max-w-md p-4 flex flex-col items-center">
           <h1 className="text-2xl text-center">IP Address Info Lookup</h1>
@@ -41,6 +44,7 @@ function AddrSearch() {
             <div className="rounded-md overflow-hidden border border-gray-800 p-4 flex-1">
               <h2 className="text-lg font-semibold mb-2">IP Address Information</h2>
               {formatData(data)}
+              <ExportData data={data} />
             </div>
           )}
         </div>
