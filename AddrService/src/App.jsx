@@ -1,7 +1,9 @@
+import AddrSearch from './AddrSearch'; 
+
 const App = () => (
-  <div>
-    
-  </div>
-)
+  <div className="App">
+      <AddrSearch />
+    </div>
+);
 
 export default App
