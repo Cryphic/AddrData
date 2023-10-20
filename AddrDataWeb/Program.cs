@@ -1,6 +1,5 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
-
 namespace AddrDataWeb
 {
     public class PacketData
@@ -21,7 +20,7 @@ namespace AddrDataWeb
             builder.Services.AddRazorPages();
             builder.Services.AddControllers();
             builder.Services.AddHttpClient();
-
+            builder.Services.AddSignalR();
             //init mongodb connection
             var connectionString = "mongodb+srv://test:test@cluster0.tsde1.mongodb.net/?retryWrites=true&w=majority";
             var client = new MongoClient(connectionString);
@@ -57,6 +56,7 @@ namespace AddrDataWeb
             {
                 endpoints.MapRazorPages();
                 endpoints.MapControllers();
+                endpoints.MapHub<BlockHub>("/blockhub");
             });
 
 
