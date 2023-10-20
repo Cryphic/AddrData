@@ -1,26 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import formatData from './FormatData';
 import ExportData from './ExportData';
 import StatusStrip from './StatusStrip';
+import ExecuteServerFunction from './ExecuteServerFunction';
 
 function AddrSearch() {
-    const [ip, setIp] = useState('');
-    const [data, setData] = useState(null);
-    const [error, setError] = useState(null);
+  const [ip, setIp] = useState('');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState('');
 
-    const handleSearch = async () => {
-        try {
-            const response = await axios.get(`http://localhost:5000/api/info/${ip}`);
-            setData(response.data);
-            setError(null);
-        } catch (error) {
-            setError('An error occurred while fetching data. Please try again later.');
-            setData(null);
-        }
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/query/clients');
+        setClients(response.data);
+      } catch (error) {
+        console.error(error);
+      }
     };
+    fetchClients();
+  }, []);
 
-      return (
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/info/${ip}`);
+      setData(response.data);
+      setError(null);
+    } catch (error) {
+      setError('An error occurred while fetching data. Please try again later.');
+      setData(null);
+    }
+  };
+
+  const handleClientChange = (e) => {
+    setSelectedClient(e.target.value);
+  };
+
+  return (
     <div>
       <StatusStrip apiUrl="http://localhost:5000/" />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white mt-8">
@@ -44,6 +63,17 @@ function AddrSearch() {
             <div className="rounded-md overflow-hidden border border-gray-800 p-4 flex-1">
               <h2 className="text-lg font-semibold mb-2">IP Address Information</h2>
               {formatData(data)}
+              <div className="flex items-center space-x-2 mb-4">
+                <label htmlFor="clients" className="text-white">Select a client:</label>
+                <select id="clients" value={selectedClient} onChange={handleClientChange} className="bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                  <option value="">Select a client</option>
+                  {clients.map((client) => (
+                    <option key={client} value={client}>{client}</option>
+                  ))}
+                </select>
+                <ExecuteServerFunction client={selectedClient} ip={ip} />
+              </div>
+              <small>The current searched IP will be sent to the client for blocking.</small>
               <ExportData data={data} />
             </div>
           )}
